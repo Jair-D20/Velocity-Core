@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Velocity Core UI 2.9 - Multi-Provider AI</title>
+  <meta name="description" content="Velocity Core UI 2.9 - Multi-Provider AI Hub">
+  
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { display: flex; height: 100vh; background-color: #0d0d0e; color: #e3e3e3; }
+
+    /* Barra Lateral */
+    #sidebar { width: 260px; background-color: #171719; padding: 16px; display: flex; flex-direction: column; gap: 15px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 1.2rem; }
+    .brand span { color: #f55036; }
+    .menu-btn { background: #212124; border: none; color: #fff; padding: 12px; border-radius: 8px; text-align: left; cursor: pointer; transition: background 0.2s; }
+    .menu-btn:hover { background: #2b2b2f; }
+    .history-title { font-size: 0.85rem; color: #8e918f; margin-top: 10px; }
+
+    /* Lista de Historial */
+    #history-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; }
+    
+    .history-item-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 8px;
+      padding: 2px 4px;
+      transition: background 0.2s;
+    }
+    .history-item-container:hover, .history-item-container.active {
+      background: #28292c;
+    }
+
+    .history-item { 
+      background: transparent; 
+      border: none; 
+      color: #c4c7c5; 
+      padding: 8px 6px; 
+      text-align: left; 
+      cursor: pointer; 
+      white-space: nowrap; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      font-size: 0.9rem;
+      flex: 1;
+    }
+    .history-item-container.active .history-item { color: #fff; }
+
+    .history-actions {
+      display: none;
+      gap: 2px;
+    }
+    .history-item-container:hover .history-actions {
+      display: flex;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #8e918f;
+      cursor: pointer;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+    .action-btn:hover { color: #fff; background: #38393c; }
+    .action-btn.delete:hover { color: #ff5555; }
+
+    .clear-all-btn {
+      background: transparent;
+      border: 1px solid #ff5555;
+      color: #ff5555;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.2s, color 0.2s;
+      margin-top: 5px;
+    }
+    .clear-all-btn:hover {
+      background: #ff5555;
+      color: #fff;
+    }
+
+    /* Área Principal */
+    #main-content { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; position: relative; }
+    .top-bar { display: flex; justify-content: flex-end; gap: 10px; }
+    
+    .api-btn { background-color: #0099ff; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .api-btn:hover { background-color: #007acc; }
+    
+    .delete-api-btn { background-color: #dc3545; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .delete-api-btn:hover { background-color: #bd2130; }
+
+    /* Centro del Chat */
+    .welcome-container { text-align: center; margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .welcome-title { font-size: 2rem; color: #ffffff; }
+    .model-selector { background-color: #212124; border: 1px solid #333; color: white; padding: 12px 24px; border-radius: 25px; font-size: 1rem; outline: none; cursor: pointer; max-width: 90%; }
+
+    /* Contenedor de Mensajes */
+    #chat-box { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 800px; margin: 0 auto; }
+
+    /* Formateo Markdown */
+    .chat-msg p { margin-bottom: 8px; }
+    .chat-msg p:last-child { margin-bottom: 0; }
+    .chat-msg ul, .chat-msg ol { margin-left: 20px; margin-bottom: 8px; }
+    .chat-msg code { background: #2d2d30; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+    .chat-msg pre { background: #1e1e24; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+    .chat-msg pre code { background: transparent; padding: 0; }
+    .chat-img-preview { max-width: 100%; max-height: 250px; border-radius: 12px; margin-bottom: 8px; display: block; }
+
+    /* Caja de Entrada e Previsualización */
+    .input-wrapper { max-width: 750px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+    .prompt-image-preview-container { display: none; position: relative; width: fit-content; max-width: 150px; }
+    .prompt-image-preview-container img { width: 100px; height: 100px; object-fit: cover; border-radius: 12px; border: 1px solid #333; }
+    .prompt-image-preview-container .remove-img-btn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #ff5555;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input-container { width: 100%; background: #171719; border-radius: 28px; padding: 10px 20px; display: flex; align-items: center; gap: 10px; }
+    .input-container input[type="text"] { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 1rem; }
+    .send-btn { background: none; border: none; color: #0099ff; cursor: pointer; font-size: 1.2rem; }
+    .icon-btn { background: none; border: none; color: #8e918f; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: color 0.2s; }
+    .icon-btn:hover { color: #fff; }
+    .mic-active { color: #ff4444 !important; animation: pulse 1.5s infinite; }
+
+    /* Modales */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { position: relative; background: #2b2b2e; color: white; width: 90%; max-width: 550px; padding: 25px; border-radius: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .modal-header { font-size: 1.2rem; font-weight: 500; }
+    .modal-field { display: flex; flex-direction: column; gap: 6px; }
+    .modal-select, .modal-input { background: #1a1a1c; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; font-size: 0.95rem; outline: none; }
+    .modal-warning { background: #38383c; padding: 10px; border-radius: 8px; font-size: 0.85rem; line-height: 1.3; }
+    .modal-warning strong { display: block; font-size: 0.95rem; margin-bottom: 4px; }
+    
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: #ff5555;
+      font-size: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .accept-btn { 
+      background-color: #00a86b; 
+      color: #ffffff; 
+      border: none; 
+      padding: 12px 0; 
+      border-radius: 8px; 
+      font-size: 1rem; 
+      font-weight: bold; 
+      cursor: pointer; 
+      text-align: center; 
+      margin-top: 5px;
+      transition: background-color 0.2s;
+    }
+    .accept-btn:hover { background-color: #008f5a; }
+
+    .danger-btn { background-color: #dc3545; }
+    .danger-btn:hover { background-color: #bd2130; }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="brand"><span>Velocity</span> Core v2.9</div>
+    <button class="menu-btn" onclick="nuevoChat()">+ Nuevo Chat</button>
+    <div class="history-title">Chat Previos</div>
+    <div id="history-list"></div>
+    <button class="clear-all-btn" onclick="borrarTodoElHistorial()">Borrar todo</button>
+  </aside>
+
+  <!-- Área Principal -->
+  <main id="main-content">
+    <div class="top-bar">
+      <button class="delete-api-btn" onclick="abrirModalBorrarApi()">Eliminar Clave API</button>
+      <button class="api-btn" id="main-api-btn" onclick="abrirModalApi()">Insertar Clave API</button>
+    </div>
+
+    <!-- Pantalla de Bienvenida -->
+    <div class="welcome-container" id="welcome-container">
+      <h1 class="welcome-title">Pregúntame lo que quieras, I know everything!</h1>
+      
+      <!-- Selector dinámico -->
+      <select class="model-selector" id="model-select">
+      </select>
+    </div>
+
+    <!-- Contenedor de Mensajes -->
+    <div id="chat-box" style="display: none;"></div>
+
+    <div class="input-wrapper">
+      <div class="prompt-image-preview-container" id="preview-container">
+        <img id="image-preview-img" src="" alt="Vista previa">
+        <button class="remove-img-btn" onclick="removerImagenAdjunta()">✕</button>
+      </div>
+      <div class="input-container">
+        <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="manejarImagen(event)">
+        <button class="icon-btn" onclick="document.getElementById('image-input').click()" title="Adjuntar imagen">
+          <span class="material-symbols-outlined">image</span>
+        </button>
+
+        <button class="icon-btn" id="mic-btn" onclick="conmutarMicrofono()" title="Dictar por voz">
+          <span class="material-symbols-outlined" id="mic-icon">mic</span>
+        </button>
+
+        <input type="text" id="user-input" placeholder="Escribe un mensaje aquí...">
+        <button class="send-btn" id="send-btn">➔</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Guardar API -->
+  <div class="modal-overlay" id="api-modal">
+    <div class="modal-box">
+      <button class="close-btn" onclick="cerrarModalApi()" title="Cancelar / Cerrar">✕</button>
+      <div class="modal-header">Seleccione su proveedor de IA:</div>
+      
+      <div class="modal-field">
+        <label style="font-size: 0.85rem; color: #ccc;">Proveedor</label>
+        <select class="modal-select" id="provider-select" onchange="cambiarProveedorModal()">
+          <option value="GROQ">GROQ</option>
+          <option value="GPT">GPT (OpenAI Directo)</option>
+          <option value="GEMINI">GEMINI (Google)</option>
+        </select>
+      </div>
+
+      <div class="modal-warning" id="modal-warning-text"></div>
+
+      <div class="modal-field">
+        <label style="font-size: 0.85rem; color: #ccc;">Clave API</label>
+        <input type="password" class="modal-input" id="api-key-input" placeholder="Introduce tu clave API...">
+      </div>
+
+      <button class="accept-btn" onclick="guardarConfiguracionApi()">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Modal Borrar API -->
+  <div class="modal-overlay" id="delete-api-modal">
+    <div class="modal-box">
+      <button class="close-btn" onclick="cerrarModalBorrarApi()" title="Cancelar / Cerrar">✕</button>
+      <div class="modal-header">Eliminar Clave API</div>
+      
+      <div class="modal-field">
+        <label style="font-size: 0.85rem; color: #ccc;">Seleccione el servicio a desvincular:</label>
+        <select class="modal-select" id="delete-provider-select">
+          <option value="GROQ">GROQ</option>
+          <option value="GPT">GPT (OpenAI Directo)</option>
+          <option value="GEMINI">GEMINI (Google)</option>
+        </select>
+      </div>
+
+      <button class="accept-btn danger-btn" onclick="eliminarClaveApi()">Desvincular Servicio</button>
+    </div>
+  </div>
+
+  <script>
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const modelSelect = document.getElementById('model-select');
+    const welcomeContainer = document.getElementById('welcome-container');
+    const chatBox = document.getElementById('chat-box');
+    const historyList = document.getElementById('history-list');
+    const mainApiBtn = document.getElementById('main-api-btn');
+    const previewContainer = document.getElementById('preview-container');
+    const imagePreviewImg = document.getElementById('image-preview-img');
+
+    let conversationHistory = [];
+    let currentChatId = null;
+    let imagenAdjuntaBase64 = null;
+
+    // Catálogo v2.8: Filtro total de modelos funcionales combinados
+    const modelosPorProveedor = {
+      GROQ: [
+        { value: 'groq/compound', label: '[Groq] Groq Compound', prov: 'GROQ' },
+        { value: 'groq/compound-mini', label: '[Groq] Groq Compound Mini', prov: 'GROQ' },
+        { value: 'qwen/qwen3.8-27b', label: '[Qwen] Qwen 3.8 27B', prov: 'GROQ' },
+        { value: 'qwen/qwen3.6-27b', label: '[Qwen] Qwen 3.6 27B', prov: 'GROQ' },
+        { value: 'openai/gpt-oss-120b', label: '[OpenAI-OSS] GPT OSS 120B', prov: 'GROQ' },
+        { value: 'openai/gpt-oss-20b', label: '[OpenAI-OSS] GPT OSS 20B', prov: 'GROQ' },
+        { value: 'openai/gpt-oss-safeguard-20b', label: '[OpenAI-OSS] GPT OSS Safeguard 20B', prov: 'GROQ' }
+      ],
+      GPT: [
+        { value: 'gpt-4o', label: '[OpenAI] GPT-4o', prov: 'GPT' },
+        { value: 'gpt-4o-mini', label: '[OpenAI] GPT-4o Mini', prov: 'GPT' },
+        { value: 'gpt-4-turbo', label: '[OpenAI] GPT-4 Turbo', prov: 'GPT' },
+        { value: 'o1-mini', label: '[OpenAI] o1-Mini', prov: 'GPT' },
+        { value: 'o3-mini', label: '[OpenAI] o3-Mini', prov: 'GPT' }
+      ],
+      GEMINI: [
+        { value: 'gemini-3.7-flash', label: '[Gemini] Gemini 3.7 Flash', prov: 'GEMINI' },
+        { value: 'gemini-3.5-flash-lite', label: '[Gemini] Gemini 3.5 Flash Lite', prov: 'GEMINI' },
+        { value: 'gemini-3.1-pro-preview', label: '[Gemini] Gemini 3.1 Pro Preview', prov: 'GEMINI' },
+        { value: 'gemini-3.6-flash', label: '[Gemini] Gemini 3.6 Flash', prov: 'GEMINI' },
+        { value: 'gemini-3.5-flash', label: '[Gemini] Gemini 3.5 Flash', prov: 'GEMINI' },
+        { value: 'gemini-3.1-flash-lite', label: '[Gemini] Gemini 3.1 Flash Lite', prov: 'GEMINI' },
+        { value: 'gemini-3-flash-preview', label: '[Gemini] Gemini 3 Flash Preview', prov: 'GEMINI' },
+        { value: 'gemini-pro-latest', label: '[Gemini] Gemini Pro Latest', prov: 'GEMINI' },
+        { value: 'gemini-flash-latest', label: '[Gemini] Gemini Flash Latest', prov: 'GEMINI' },
+        { value: 'gemini-flash-lite-latest', label: '[Gemini] Gemini Flash-Lite Latest', prov: 'GEMINI' }
+      ]
+    };
+
+    function limpiarThinkingProcess(texto) {
+      if (!texto) return '';
+      let textoLimpio = texto.replace(/<think>[\s\S]*?<\/think>/gi, '');
+      if (/Here's a thinking process:/i.test(textoLimpio)) {
+        const partes = textoLimpio.split(/\n(?=[0-9]+\.\s*Final Output|\n[A-Z][a-z]+!|\n"|\n[¡¿])/i);
+        if (partes.length > 1) {
+          textoLimpio = partes[partes.length - 1];
+        } else {
+          textoLimpio = textoLimpio.replace(/Here's a thinking process:[\s\S]*?(?=\n\n|\n[¡¿A-Za-z])/i, '');
+        }
+      }
+      return textoLimpio.trim();
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let escuchando = false;
+    let textoPrevio = '';
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        let transcripcionFinal = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            transcripcionFinal += event.results[i][0].transcript;
+          }
+        }
+        if (transcripcionFinal) {
+          userInput.value = (textoPrevio + (textoPrevio ? ' ' : '') + transcripcionFinal).trim();
+        }
+      };
+
+      recognition.onend = () => {
+        escuchando = false;
+        document.getElementById('mic-icon').classList.remove('mic-active');
+      };
+
+      recognition.onerror = () => {
+        escuchando = false;
+        document.getElementById('mic-icon').classList.remove('mic-active');
+      };
+    }
+
+    function conmutarMicrofono() {
+      if (!SpeechRecognition) {
+        alert("Tu navegador no soporta dictado por voz.");
+        return;
+      }
+
+      const micIcon = document.getElementById('mic-icon');
+      if (!escuchando) {
+        textoPrevio = userInput.value;
+        recognition.start();
+        escuchando = true;
+        micIcon.classList.add('mic-active');
+      } else {
+        recognition.stop();
+        escuchando = false;
+        micIcon.classList.remove('mic-active');
+      }
+    }
+
+    function mostrarVistaPreviaImagen(base64) {
+      imagenAdjuntaBase64 = base64;
+      imagePreviewImg.src = base64;
+      previewContainer.style.display = 'block';
+    }
+
+    function removerImagenAdjunta() {
+      imagenAdjuntaBase64 = null;
+      document.getElementById('image-input').value = '';
+      previewContainer.style.display = 'none';
+      imagePreviewImg.src = '';
+    }
+
+    function manejarImagen(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        mostrarVistaPreviaImagen(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Captura de imágenes pegadas mediante Ctrl + V o portapapeles
+    window.addEventListener('paste', (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (let item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            mostrarVistaPreviaImagen(event.target.result);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    });
+
+    function tieneAlgunaClaveGuardada() {
+      return !!(localStorage.getItem('api_key_GROQ') || 
+                localStorage.getItem('api_key_GPT') || 
+                localStorage.getItem('api_key_GEMINI'));
+    }
+
+    function actualizarEstadoBotonApi() {
+      if (tieneAlgunaClaveGuardada()) {
+        mainApiBtn.innerText = "Insertar nueva clave API";
+      } else {
+        mainApiBtn.innerText = "Insertar Clave API";
+      }
+    }
+
+    function actualizarSelectorModelos() {
+      const modeloSeleccionadoPrevio = modelSelect.value;
+      modelSelect.innerHTML = '';
+      
+      let modelosDisponibles = [];
+
+      ['GROQ', 'GPT', 'GEMINI'].forEach(prov => {
+        const key = localStorage.getItem(`api_key_${prov}`);
+        if (key) {
+          modelosDisponibles = modelosDisponibles.concat(modelosPorProveedor[prov]);
+        }
+      });
+
+      if (modelosDisponibles.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = 'N/A';
+        opt.innerText = 'Sin claves API configuradas (Agrega una API Key)';
+        modelSelect.appendChild(opt);
+        return;
+      }
+
+      modelosDisponibles.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.value;
+        opt.innerText = m.label;
+        opt.dataset.provider = m.prov;
+        modelSelect.appendChild(opt);
+      });
+
+      if (modeloSeleccionadoPrevio && Array.from(modelSelect.options).some(o => o.value === modeloSeleccionadoPrevio)) {
+        modelSelect.value = modeloSeleccionadoPrevio;
+      }
+    }
+
+    function abrirModalApi() {
+      const modal = document.getElementById('api-modal');
+      document.getElementById('api-key-input').value = '';
+      cambiarProveedorModal();
+      modal.style.display = 'flex';
+    }
+
+    function cerrarModalApi() {
+      document.getElementById('api-modal').style.display = 'none';
+    }
+
+    function abrirModalBorrarApi() {
+      document.getElementById('delete-api-modal').style.display = 'flex';
+    }
+
+    function cerrarModalBorrarApi() {
+      document.getElementById('delete-api-modal').style.display = 'none';
+    }
+
+    function eliminarClaveApi() {
+      const prov = document.getElementById('delete-provider-select').value;
+      localStorage.removeItem(`api_key_${prov}`);
+
+      actualizarSelectorModelos();
+      actualizarEstadoBotonApi();
+      cerrarModalBorrarApi();
+      alert(`La clave API para el servicio ${prov} ha sido eliminada.`);
+    }
+
+    function cambiarProveedorModal() {
+      const prov = document.getElementById('provider-select').value;
+      const warningText = document.getElementById('modal-warning-text');
+
+      if (prov === 'GROQ') {
+        warningText.innerHTML = `<strong>Groq:</strong> Acceso a modelos Groq, Qwen y OpenAI-OSS.`;
+      } else if (prov === 'GPT') {
+        warningText.innerHTML = `<strong>OpenAI Directo:</strong> Conexión directa a endpoints OpenAI (GPT-4o, o1, o3).`;
+      } else if (prov === 'GEMINI') {
+        warningText.innerHTML = `<strong>Google Gemini:</strong> Acceso oficial a toda la gama Gemini (1.5, 2.0 y 3.x).`;
+      }
+    }
+
+    function guardarConfiguracionApi() {
+      const prov = document.getElementById('provider-select').value;
+      const key = document.getElementById('api-key-input').value.trim();
+
+      if (!key) {
+        alert('No ingresaste ninguna clave nueva.');
+        return;
+      }
+
+      localStorage.setItem(`api_key_${prov}`, key);
+
+      actualizarSelectorModelos();
+      actualizarEstadoBotonApi();
+      cerrarModalApi();
+      alert(`Configuración de ${prov} guardada correctamente.`);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      actualizarSelectorModelos();
+      actualizarEstadoBotonApi();
+      renderizarHistorialSidebar();
+    });
+
+    function obtenerTodosLosChats() {
+      return JSON.parse(localStorage.getItem('groq_saved_chats') || '[]');
+    }
+
+    function guardarTodosLosChats(chats) {
+      localStorage.setItem('groq_saved_chats', JSON.stringify(chats));
+    }
+
+    function borrarTodoElHistorial() {
+      if (!confirm("¿Estás seguro de que deseas borrar TODO el historial de conversaciones?")) return;
+      localStorage.removeItem('groq_saved_chats');
+      nuevoChat();
+    }
+
+    function guardarChatActual() {
+      if (!currentChatId || conversationHistory.length === 0) return;
+
+      const chats = obtenerTodosLosChats();
+      const primerMensaje = conversationHistory.find(m => m.role === 'user');
+      let titulo = 'Nueva conversación';
+      
+      if (primerMensaje) {
+        if (typeof primerMensaje.content === 'string') {
+          titulo = primerMensaje.content;
+        } else if (Array.isArray(primerMensaje.content)) {
+          const textoObj = primerMensaje.content.find(c => c.type === 'text');
+          if (textoObj) titulo = textoObj.text;
+        }
+      }
+
+      titulo = titulo.length > 25 ? titulo.substring(0, 25) + '...' : titulo;
+
+      const chatIndex = chats.findIndex(c => c.id === currentChatId);
+      const chatExistente = chats[chatIndex];
+
+      const chatData = {
+        id: currentChatId,
+        title: chatExistente ? chatExistente.title : titulo,
+        messages: conversationHistory,
+        model: modelSelect.value
+      };
+
+      if (chatIndex >= 0) {
+        chats[chatIndex] = chatData;
+      } else {
+        chats.unshift(chatData);
+      }
+
+      guardarTodosLosChats(chats);
+      renderizarHistorialSidebar();
+    }
+
+    function renombrarChat(id, e) {
+      e.stopPropagation();
+      const chats = obtenerTodosLosChats();
+      const chat = chats.find(c => c.id === id);
+      if (!chat) return;
+
+      const nuevoNombre = prompt("Ingresa el nuevo nombre para la conversación:", chat.title);
+      if (nuevoNombre && nuevoNombre.trim() !== '') {
+        chat.title = nuevoNombre.trim();
+        guardarTodosLosChats(chats);
+        renderizarHistorialSidebar();
+      }
+    }
+
+    function eliminarChat(id, e) {
+      e.stopPropagation();
+      if (!confirm("¿Estás seguro de que deseas eliminar esta conversación?")) return;
+
+      let chats = obtenerTodosLosChats();
+      chats = chats.filter(c => c.id !== id);
+      guardarTodosLosChats(chats);
+
+      if (currentChatId === id) {
+        nuevoChat();
+      } else {
+        renderizarHistorialSidebar();
+      }
+    }
+
+    function renderizarHistorialSidebar() {
+      historyList.innerHTML = '';
+      const chats = obtenerTodosLosChats();
+
+      chats.forEach(chat => {
+        const container = document.createElement('div');
+        container.className = `history-item-container ${chat.id === currentChatId ? 'active' : ''}`;
+
+        const btn = document.createElement('button');
+        btn.className = 'history-item';
+        btn.innerText = chat.title;
+        btn.onclick = () => cargarChat(chat.id);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'history-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn';
+        editBtn.title = 'Renombrar';
+        editBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">edit</span>`;
+        editBtn.onclick = (e) => renombrarChat(chat.id, e);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'action-btn delete';
+        delBtn.title = 'Eliminar';
+        delBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">delete</span>`;
+        delBtn.onclick = (e) => eliminarChat(chat.id, e);
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+
+        container.appendChild(btn);
+        container.appendChild(actionsDiv);
+        historyList.appendChild(container);
+      });
+    }
+
+    function cargarChat(id) {
+      const chats = obtenerTodosLosChats();
+      const chat = chats.find(c => c.id === id);
+      if (!chat) return;
+
+      currentChatId = chat.id;
+      conversationHistory = chat.messages || [];
+      if (chat.model) modelSelect.value = chat.model;
+
+      welcomeContainer.style.display = 'none';
+      chatBox.style.display = 'flex';
+      chatBox.innerHTML = '';
+
+      conversationHistory.forEach(msg => {
+        if (typeof msg.content === 'string') {
+          appendMessage(msg.role, msg.content, false);
+        } else if (Array.isArray(msg.content)) {
+          let text = '';
+          let imgSrc = null;
+          msg.content.forEach(c => {
+            if (c.type === 'text') text = c.text;
+            if (c.type === 'image_url') imgSrc = c.image_url.url;
+          });
+          appendMessage(msg.role, text, false, imgSrc);
+        }
+      });
+
+      renderizarHistorialSidebar();
+    }
+
+    function nuevoChat() {
+      conversationHistory = [];
+      currentChatId = null;
+      removerImagenAdjunta();
+      chatBox.innerHTML = '';
+      chatBox.style.display = 'none';
+      welcomeContainer.style.display = 'flex';
+      renderizarHistorialSidebar();
+    }
+
+    async function enviarMensaje() {
+      const text = userInput.value.trim();
+      const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+      
+      if (!selectedOption || selectedOption.value === 'N/A') {
+        alert("Por favor, ingresa al menos una clave API para continuar.");
+        abrirModalApi();
+        return;
+      }
+
+      const prov = selectedOption.dataset.provider;
+      const apiKey = localStorage.getItem(`api_key_${prov}`);
+      const selectedModel = selectedOption.value;
+
+      if (!text && !imagenAdjuntaBase64) return;
+
+      if (!apiKey) {
+        alert(`No tienes guardada la clave API para ${prov}.`);
+        abrirModalApi();
+        return;
+      }
+
+      if (!currentChatId) {
+        currentChatId = 'chat-' + Date.now();
+      }
+
+      if (welcomeContainer.style.display !== 'none') {
+        welcomeContainer.style.display = 'none';
+        chatBox.style.display = 'flex';
+      }
+
+      appendMessage('user', text, false, imagenAdjuntaBase64);
+      userInput.value = '';
+
+      let userMessageObj;
+      if (imagenAdjuntaBase64) {
+        userMessageObj = {
+          role: 'user',
+          content: [
+            { type: 'text', text: text || 'Analiza esta imagen.' },
+            { type: 'image_url', image_url: { url: imagenAdjuntaBase64 } }
+          ]
+        };
+      } else {
+        userMessageObj = { role: 'user', content: text };
+      }
+
+      conversationHistory.push(userMessageObj);
+      guardarChatActual();
+
+      removerImagenAdjunta();
+
+      const loadingId = appendMessage('assistant', 'Pensando...', true);
+
+      // Definición del System Prompt dinámico para la identidad Velocity Core
+      const systemPromptContent = `Tu nombre es Velocity Core. Eres una IA avanzada. Si te preguntan quién eres o qué modelo eres, responde identificándote como "Velocity Core, potenciado por el modelo ${selectedModel}". Mantén esta identidad de forma clara y amable.`;
+
+      try {
+        let aiResponse = '';
+
+        if (prov === 'GEMINI') {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+          
+          const contents = conversationHistory.map(msg => {
+            const role = msg.role === 'assistant' ? 'model' : 'user';
+            let parts = [];
+
+            if (typeof msg.content === 'string') {
+              parts.push({ text: msg.content });
+            } else if (Array.isArray(msg.content)) {
+              msg.content.forEach(c => {
+                if (c.type === 'text') parts.push({ text: c.text });
+                if (c.type === 'image_url') {
+                  const base64Data = c.image_url.url.split(',')[1];
+                  const mimeType = c.image_url.url.split(';')[0].split(':')[1];
+                  parts.push({
+                    inlineData: { mimeType: mimeType, data: base64Data }
+                  });
+                }
+              });
+            }
+            return { role, parts };
+          });
+
+          // Inyección del System Instruction para Google Gemini
+          const payload = {
+            contents: contents,
+            systemInstruction: {
+              parts: [{ text: systemPromptContent }]
+            }
+          };
+
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error?.message || `Error status ${response.status}`);
+          }
+
+          const data = await response.json();
+          aiResponse = data.candidates[0].content.parts[0].text;
+
+        } else {
+          let apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+          if (prov === 'GPT') {
+            apiUrl = 'https://api.openai.com/v1/chat/completions';
+          }
+
+          // Inyección de mensaje System al inicio de la lista de mensajes
+          const messagesPayload = [
+            { role: 'system', content: systemPromptContent },
+            ...conversationHistory
+          ];
+
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: selectedModel,
+              messages: messagesPayload,
+              temperature: 0.7
+            })
+          });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error?.message || `Error status ${response.status}`);
+          }
+
+          const data = await response.json();
+          aiResponse = data.choices[0].message.content;
+        }
+
+        aiResponse = limpiarThinkingProcess(aiResponse);
+
+        conversationHistory.push({ role: 'assistant', content: aiResponse });
+        guardarChatActual();
+
+        const responseDiv = document.getElementById(loadingId);
+        responseDiv.innerHTML = marked.parse(aiResponse);
+
+      } catch (error) {
+        console.error(error);
+        const customErrorMessage = `Error al conectar con ${prov} (${selectedModel}): ${error.message}`;
+
+        const errorDiv = document.getElementById(loadingId);
+        errorDiv.style.color = '#ff6b6b';
+        errorDiv.innerText = customErrorMessage;
+      }
+    }
+
+    function appendMessage(role, text, isRawText = false, imgSrc = null) {
+      const msgDiv = document.createElement('div');
+      const id = 'msg-' + Date.now() + Math.random().toString(36).substr(2, 4);
+      msgDiv.id = id;
+      msgDiv.className = 'chat-msg';
+      msgDiv.style.cssText = `
+        padding: 12px 18px; 
+        border-radius: 18px; 
+        max-width: 80%; 
+        line-height: 1.5;
+        ${role === 'user' 
+          ? 'background-color: #2b2c2e; align-self: flex-end; color: #fff;' 
+          : 'background-color: #171719; align-self: flex-start; color: #e3e3e3;'}
+      `;
+
+      let contentHTML = '';
+      if (imgSrc) {
+        contentHTML += `<img src="${imgSrc}" class="chat-img-preview" />`;
+      }
+
+      if (role === 'assistant' && !isRawText) {
+        const textoLimpio = limpiarThinkingProcess(text);
+        contentHTML += marked.parse(textoLimpio);
+        msgDiv.innerHTML = contentHTML;
+      } else {
+        const textNode = document.createElement('div');
+        textNode.innerText = text;
+        msgDiv.innerHTML = contentHTML;
+        msgDiv.appendChild(textNode);
+      }
+
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return id;
+    }
+
+    sendBtn.addEventListener('click', enviarMensaje);
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') enviarMensaje();
+    });
+  </script>
+</body>
+</html>
